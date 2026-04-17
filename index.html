@@ -4,91 +4,120 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>TLB Alert Remote</title>
-    <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
-    
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #000; color: white; text-align: center; padding: 20px; }
-        .card { background: #1a1a1a; padding: 20px; border-radius: 15px; border: 1px solid #333; }
+        body { 
+            font-family: 'Segoe UI', Roboto, sans-serif; 
+            background: #0a0a0a; 
+            color: white; 
+            text-align: center; 
+            padding: 20px;
+            margin: 0;
+        }
+        .container {
+            max-width: 500px;
+            margin: auto;
+            background: #1a1a1a;
+            padding: 30px;
+            border-radius: 20px;
+            border: 1px solid #333;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        h2 { color: #ff4444; text-transform: uppercase; letter-spacing: 2px; }
         
-        .status-pill { display: inline-block; padding: 5px 15px; border-radius: 20px; font-size: 0.8em; margin-bottom: 15px; }
-        .online { background: #004400; color: #00ff00; }
-        .offline { background: #440000; color: #ff4444; }
+        input, select {
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            background: #222;
+            border: 1px solid #444;
+            color: white;
+            border-radius: 10px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
 
-        input, select, button { width: 100%; padding: 16px; margin: 10px 0; border-radius: 10px; border: none; font-size: 1rem; box-sizing: border-box; }
+        .btn {
+            width: 100%;
+            padding: 20px;
+            margin-top: 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: transform 0.1s;
+        }
+        .btn:active { transform: scale(0.98); }
         
-        input { background: #222; color: white; border: 1px solid #444; }
-        select { background: #222; color: white; }
+        .trigger { background: #ff0000; color: white; }
+        .clear { background: #333; color: #888; margin-top: 10px; }
         
-        .btn-trigger { background: #ff0000; color: white; font-weight: bold; text-transform: uppercase; cursor: pointer; }
-        .btn-clear { background: #333; color: #888; cursor: pointer; }
-        
-        label { display: flex; align-items: center; justify-content: space-between; padding: 10px; font-size: 0.9em; }
-        .toggle { width: 40px; height: 20px; }
+        #status {
+            font-size: 0.8rem;
+            margin-top: 15px;
+            color: #666;
+        }
     </style>
 </head>
 <body>
 
-    <div class="card">
-        <div id="connection" class="status-pill offline">PC DISCONNECTED</div>
-        
-        <input type="text" id="msg" placeholder="Describe the issue...">
+    <div class="container">
+        <h2>TLB Remote</h2>
+        <div id="status">Connecting to lapinx-alert...</div>
+
+        <input type="text" id="msg" placeholder="Enter Alert Message...">
         
         <select id="severity">
-            <option value="minor">MINOR (Red / White)</option>
-            <option value="caution">CAUTION (Yellow / Black)</option>
+            <option value="minor">Minor (Red/White)</option>
+            <option value="caution">Caution (Yellow/Black)</option>
         </select>
 
-        <label>
-            <span>Alarm Sound (Local PC)</span>
-            <input type="checkbox" id="sound" class="toggle" checked>
-        </label>
-
-        <button class="btn-trigger" onclick="send(true)">Trigger Alarm</button>
-        <button class="btn-clear" onclick="send(false)">All Clear</button>
+        <button class="btn trigger" onclick="sendSignal(true)">Trigger Alert</button>
+        <button class="btn clear" onclick="sendSignal(false)">All Clear / Close</button>
     </div>
 
     <script>
-        // REPLACE THIS with your Localtunnel URL (e.g., https://lapinx-alert.loca.lt)
-        const BRIDGE_URL = "https://lapinx-alert.loca.lt"; 
+        // Use your specific Localtunnel subdomain
+        const TUNNEL_URL = "https://lapinx-alert.loca.lt";
 
-        async function send(active) {
-            const payload = {
-                active: active,
-                message: document.getElementById('msg').value || "ALERT",
-                type: document.getElementById('severity').value,
-                soundEnabled: document.getElementById('sound').checked
-            };
+        async function sendSignal(active) {
+            const statusDiv = document.getElementById('status');
+            const messageText = document.getElementById('msg').value || "EMERGENCY ALERT";
+            const severityValue = document.getElementById('severity').value;
+
+            statusDiv.innerText = "Sending signal...";
+            statusDiv.style.color = "yellow";
 
             try {
-                await fetch(BRIDGE_URL, {
+                const response = await fetch(TUNNEL_URL, {
                     method: 'POST',
-                    mode: 'no-cors', // Essential for free tunnels
-                    body: JSON.stringify(payload)
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Bypass-Tunnel-Reminder': 'true' // Crucial for Localtunnel
+                    },
+                    body: JSON.stringify({
+                        active: active,
+                        message: messageText,
+                        type: severityValue
+                    })
                 });
-                alert("Signal Sent!");
-            } catch (e) {
-                alert("Error: Bridge Offline");
-            }
-        }
 
-        async function checkPC() {
-            const indicator = document.getElementById('connection');
-            try {
-                const res = await fetch(BRIDGE_URL);
-                if (res.ok) {
-                    indicator.innerText = "PC ONLINE";
-                    indicator.className = "status-pill online";
+                if (response.ok) {
+                    statusDiv.innerText = active ? "ALERT ACTIVE" : "SYSTEM CLEARED";
+                    statusDiv.style.color = active ? "#ff4444" : "#44ff44";
+                } else {
+                    statusDiv.innerText = "Error: Bridge Offline (503/404)";
+                    statusDiv.style.color = "red";
                 }
-            } catch (e) {
-                indicator.innerText = "PC OFFLINE";
-                indicator.className = "status-pill offline";
+            } catch (error) {
+                statusDiv.innerText = "Connection Failed. Check Tunnel.";
+                statusDiv.style.color = "red";
+                console.error(error);
             }
         }
-
-        // Check if the PC is still running every 5 seconds
-        setInterval(checkPC, 5000);
-        checkPC();
     </script>
 </body>
 </html>
