@@ -1,52 +1,115 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>TLB Remote</title>
     <style>
-        body { background: #000; color: #fff; font-family: sans-serif; text-align: center; padding: 20px; }
-        .box { background: #111; border: 1px solid #333; padding: 30px; border-radius: 20px; max-width: 400px; margin: auto; }
-        input { width: 90%; padding: 15px; background: #222; border: 1px solid #444; color: #fff; border-radius: 10px; margin-bottom: 20px; }
-        .btn { width: 100%; padding: 25px; border-radius: 12px; font-size: 1.3rem; font-weight: bold; cursor: pointer; border: none; }
-        .red { background: #ff0000; color: white; margin-bottom: 10px; }
-        #status { font-size: 0.9rem; margin-top: 15px; color: #888; }
+        body { 
+            background: #050505; 
+            color: #ffffff; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            width: 90%;
+            max-width: 400px;
+            background: #111;
+            padding: 25px;
+            border-radius: 24px;
+            border: 1px solid #222;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.8);
+        }
+        h1 { font-size: 1.5rem; margin-bottom: 20px; letter-spacing: 1px; color: #eee; }
+        input {
+            width: 100%;
+            padding: 18px;
+            margin-bottom: 15px;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            color: #fff;
+            border-radius: 12px;
+            font-size: 16px;
+            box-sizing: border-box;
+            outline: none;
+        }
+        input:focus { border-color: #ff3333; }
+        .btn {
+            width: 100%;
+            padding: 20px;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            text-transform: uppercase;
+            transition: transform 0.1s, opacity 0.2s;
+            margin-bottom: 10px;
+        }
+        .btn:active { transform: scale(0.96); opacity: 0.8; }
+        .trigger { background: #ff3333; color: white; }
+        .clear { background: #222; color: #666; }
+        #log {
+            margin-top: 15px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #444;
+            text-transform: uppercase;
+        }
     </style>
 </head>
 <body>
-    <div class="box">
+
+    <div class="container">
         <h1>TLB REMOTE</h1>
-        <input type="text" id="m" placeholder="Alert Message...">
-        <button class="btn red" onclick="send(true)">TRIGGER ALERT</button>
-        <button class="btn" style="background:#333;color:#888;" onclick="send(false)">ALL CLEAR</button>
-        <div id="status">Status: Waiting</div>
+        <input type="text" id="alertMsg" placeholder="Enter alert message...">
+        
+        <button class="btn trigger" onclick="fire(true)">Trigger Alert</button>
+        <button class="btn clear" onclick="fire(false)">All Clear</button>
+        
+        <div id="log">System Ready</div>
     </div>
 
     <script>
-        // MUST MATCH YOUR TERMINAL URL EXACTLY
-        const BRIDGE = "https://lapinx-alert.loca.lt"; 
+        // IMPORTANT: Change this if your terminal shows a different URL
+        const TUNNEL_URL = "https://lapinx-alert.loca.lt";
 
-        async function send(act) {
-            const status = document.getElementById('status');
-            const msg = document.getElementById('m').value || "EMERGENCY";
+        async function fire(status) {
+            const display = document.getElementById('log');
+            const message = document.getElementById('alertMsg').value || "EMERGENCY ALERT";
             
-            status.innerText = "SENDING...";
-            
+            display.innerText = "Connecting...";
+            display.style.color = "#888";
+
             try {
-                // Using 'no-cors' forces the browser to send the signal even if 
-                // the tunnel's security page is being annoying.
-                await fetch(BRIDGE, {
+                // Using 'no-cors' allows the request to fire even if the browser 
+                // thinks the tunnel response is 'insecure'.
+                await fetch(TUNNEL_URL, {
                     method: 'POST',
-                    mode: 'no-cors', 
+                    mode: 'no-cors',
                     headers: {
+                        'Content-Type': 'application/json',
                         'Bypass-Tunnel-Reminder': 'true'
                     },
-                    body: JSON.stringify({ active: act, message: msg })
+                    body: JSON.stringify({
+                        active: status,
+                        message: message
+                    })
                 });
-                
-                status.innerText = "SIGNAL DISPATCHED";
-                status.style.color = "#00ff00";
-            } catch (e) {
-                status.innerText = "NETWORK ERROR";
-                status.style.color = "red";
+
+                // With no-cors, we assume success if no error is thrown
+                display.innerText = status ? "SIGNAL: ACTIVE" : "SIGNAL: CLEARED";
+                display.style.color = status ? "#ff3333" : "#44ff44";
+
+            } catch (err) {
+                console.error("Fetch Error:", err);
+                display.innerText = "OFFLINE: Check PC Script";
+                display.style.color = "orange";
             }
         }
     </script>
