@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>TLB Alert Remote</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #000; color: white; text-align: center; padding: 20px; }
+        .card { background: #1a1a1a; padding: 20px; border-radius: 15px; border: 1px solid #333; }
+        
+        .status-pill { display: inline-block; padding: 5px 15px; border-radius: 20px; font-size: 0.8em; margin-bottom: 15px; }
+        .online { background: #004400; color: #00ff00; }
+        .offline { background: #440000; color: #ff4444; }
+
+        input, select, button { width: 100%; padding: 16px; margin: 10px 0; border-radius: 10px; border: none; font-size: 1rem; box-sizing: border-box; }
+        
+        input { background: #222; color: white; border: 1px solid #444; }
+        select { background: #222; color: white; }
+        
+        .btn-trigger { background: #ff0000; color: white; font-weight: bold; text-transform: uppercase; cursor: pointer; }
+        .btn-clear { background: #333; color: #888; cursor: pointer; }
+        
+        label { display: flex; align-items: center; justify-content: space-between; padding: 10px; font-size: 0.9em; }
+        .toggle { width: 40px; height: 20px; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <div id="connection" class="status-pill offline">PC DISCONNECTED</div>
+        
+        <input type="text" id="msg" placeholder="Describe the issue...">
+        
+        <select id="severity">
+            <option value="minor">MINOR (Red / White)</option>
+            <option value="caution">CAUTION (Yellow / Black)</option>
+        </select>
+
+        <label>
+            <span>Alarm Sound (Local PC)</span>
+            <input type="checkbox" id="sound" class="toggle" checked>
+        </label>
+
+        <button class="btn-trigger" onclick="send(true)">Trigger Alarm</button>
+        <button class="btn-clear" onclick="send(false)">All Clear</button>
+    </div>
+
+    <script>
+        // REPLACE THIS with your Localtunnel URL (e.g., https://lapinx-alert.loca.lt)
+        const BRIDGE_URL = "https://lapinx-alert.loca.lt"; 
+
+        async function send(active) {
+            const payload = {
+                active: active,
+                message: document.getElementById('msg').value || "ALERT",
+                type: document.getElementById('severity').value,
+                soundEnabled: document.getElementById('sound').checked
+            };
+
+            try {
+                await fetch(BRIDGE_URL, {
+                    method: 'POST',
+                    mode: 'no-cors', // Essential for free tunnels
+                    body: JSON.stringify(payload)
+                });
+                alert("Signal Sent!");
+            } catch (e) {
+                alert("Error: Bridge Offline");
+            }
+        }
+
+        async function checkPC() {
+            const indicator = document.getElementById('connection');
+            try {
+                const res = await fetch(BRIDGE_URL);
+                if (res.ok) {
+                    indicator.innerText = "PC ONLINE";
+                    indicator.className = "status-pill online";
+                }
+            } catch (e) {
+                indicator.innerText = "PC OFFLINE";
+                indicator.className = "status-pill offline";
+            }
+        }
+
+        // Check if the PC is still running every 5 seconds
+        setInterval(checkPC, 5000);
+        checkPC();
+    </script>
+</body>
+</html>
